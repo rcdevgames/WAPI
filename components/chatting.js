@@ -21,8 +21,11 @@ router.post('/sendmessage/:phone', async (req,res) => {
     } else {
         client.sendMessage(phone + '@c.us', message).then((response) => {
             if (response.id.fromMe) {
-                res.send({ status:'success', message: `Message successfully sent to ${phone}` })
+                res.send({ success: true, message: `Message successfully sent to ${phone}` })
             }
+        }).catch((error) => {
+            console.log(error)
+            res.send({ success: false, message: `Please Authenticate First` })
         });
     }
 });

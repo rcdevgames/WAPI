@@ -5,12 +5,15 @@ router.get("/checkauth", async (req, res) => {
   client
     .getState()
     .then((data) => {
-      console.log(data);
-      res.send(data);
+      if (data) {
+        res.send({ success: true, message: data });
+      }else {
+        res.send({ success: false, message: `Disconnected` });
+      }
     })
     .catch((err) => {
       if (err) {
-        res.send("DISCONNECTED");
+        res.send({ success: false, message: `Disconnected` });
       }
     });
 });
@@ -20,39 +23,41 @@ router.get("/getqr", async (req, res) => {
     .getState()
     .then((data) => {
       if (data) {
-        res.write("<html><body><h2>Already Authenticated</h2></body></html>");
-        res.end();
-      } else sendQr(res);
+        res.send({ success: true, message: `Already Authenticated` });
+      } else {
+        res.send({ success: false, message: `Please Scan QR First.`, data: sendQr() });
+      }
     })
-    .catch(() => sendQr(res));
+    .catch(() => res.send({ success: false, message: `Please Scan QR First.`, data: sendQr() }));
 });
 
-function sendQr(res) {
+function sendQr(res=null) {
   fs.readFile("components/last.qr", (err, last_qr) => {
     if (!err && last_qr) {
-      var page = `
-                    <html>
-                        <body>
-                            <script type="module">
-                            </script>
-                            <div id="qrcode"></div>
-                            <script type="module">
-                                import QrCreator from "https://cdn.jsdelivr.net/npm/qr-creator/dist/qr-creator.es6.min.js";
-                                let container = document.getElementById("qrcode");
-                                QrCreator.render({
-                                    text: "${last_qr}",
-                                    radius: 0.5, // 0.0 to 0.5
-                                    ecLevel: "H", // L, M, Q, H
-                                    fill: "#536DFE", // foreground color
-                                    background: null, // color or null for transparent
-                                    size: 256, // in pixels
-                                }, container);
-                            </script>
-                        </body>
-                    </html>
-                `;
-      res.write(page);
-      res.end();
+      return last_qr
+      // var page = `
+      //               <html>
+      //                   <body>
+      //                       <script type="module">
+      //                       </script>
+      //                       <div id="qrcode"></div>
+      //                       <script type="module">
+      //                           import QrCreator from "https://cdn.jsdelivr.net/npm/qr-creator/dist/qr-creator.es6.min.js";
+      //                           let container = document.getElementById("qrcode");
+      //                           QrCreator.render({
+      //                               text: "${last_qr}",
+      //                               radius: 0.5, // 0.0 to 0.5
+      //                               ecLevel: "H", // L, M, Q, H
+      //                               fill: "#536DFE", // foreground color
+      //                               background: null, // color or null for transparent
+      //                               size: 256, // in pixels
+      //                           }, container);
+      //                       </script>
+      //                   </body>
+      //               </html>
+      //           `;
+      // res.write(page);
+      // res.end();
     }
   });
 }
