@@ -85,6 +85,12 @@ router.post("/send", async (req, res) => {
         callback = { success: false, message: 'Tidak Dapat Mengirim Pesan, Mohon Scan Ulang QR' };
     }
 
+    var valid = await checkNumber(phone);
+
+    if (!valid) {
+        callback = { success: false, message: 'Nomor Tidak terdaftar pada whatsapp' };
+    }
+
     // Reformat Phone Number
     fix_phone = phone.replace("+","").split("-").join("");
 
@@ -95,6 +101,7 @@ router.post("/send", async (req, res) => {
             callback = { success: true, message: `MediaMessage successfully sent to ${phone}` };
         }
     } catch (err) {
+        console.log(err);
         callback = { success: false, message: `Gagal mengirim pesan ke ${phone}`, error: err };
     }
 
