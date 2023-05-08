@@ -1,0 +1,23 @@
+{
+  "name": "wapi",
+  "version": "2.0.0",
+  "description": "Whatsapp API Private V2",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "author": "Rizky Andhika Putra",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3-multiple-ciphers": "^8.3.0",
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "helmet": "^6.1.5",
+    "wa-multi-session": "^2.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
