@@ -15,12 +15,23 @@ import (
 	"github.com/vincent-petithory/dataurl"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
+	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 	"golang.org/x/crypto/bcrypt"
 	"encoding/base64"
 	"crypto/sha256"
 	"crypto/subtle"
 )
+
+type Values struct {
+	m map[string]string
+}
+
+func (v Values) Get(key string) string {
+	return v.m[key]
+}
+
+var messageTypes = []string{"Message", "ReadReceipt", "Presence", "HistorySync", "ChatPresence", "All"}
 
 func (s *server) authmaster(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -434,4 +445,51 @@ func (s *server) PuteriSend() http.HandlerFunc {
 		}
 		return
 	}
+}
+
+// Writes JSON response to API clients
+func (s *server) Respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	dataenvelope := map[string]interface{}{"code": status}
+	if err, ok := data.(error); ok {
+		dataenvelope["error"] = err.Error()
+		dataenvelope["success"] = false
+	} else {
+		mydata := make(map[string]interface{})
+		err = json.Unmarshal([]byte(data.(string)), &mydata)
+		if err != nil {
+			log.Error().Str("error", fmt.Sprintf("%v", err)).Msg("Error unmarshalling JSON")
+		}
+		dataenvelope["data"] = mydata
+		dataenvelope["success"] = true
+	}
+	data = dataenvelope
+
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		panic("respond: " + err.Error())
+	}
+}
+
+func validateMessageFields(phone string, stanzaid *string, participant *string) (types.JID, error) {
+
+	recipient, ok := parseJID(phone)
+	if !ok {
+		return types.NewJID("", types.DefaultUserServer), errors.New("Could not parse Phone")
+	}
+
+	if stanzaid != nil {
+		if participant == nil {
+			return types.NewJID("", types.DefaultUserServer), errors.New("Missing Participant in ContextInfo")
+		}
+	}
+
+	if participant != nil {
+		if stanzaid == nil {
+			return types.NewJID("", types.DefaultUserServer), errors.New("Missing StanzaId in ContextInfo")
+		}
+	}
+
+	return recipient, nil
 }

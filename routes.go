@@ -62,45 +62,4 @@ func (s *server) routes() {
 	s.router.Handle("/puteri/auth", c.Then(s.PuteriAuth())).Methods("GET")
 	s.router.Handle("/puteri/logout", c.Then(s.PuteriLogout())).Methods("GET")
 	s.router.Handle("/puteri/send", c.Then(s.PuteriSend())).Methods("POST")
-
-	// s.router.Handle("/session/connect", c.Then(s.Connect())).Methods("POST")
-	// s.router.Handle("/session/disconnect", c.Then(s.Disconnect())).Methods("POST")
-	// s.router.Handle("/session/logout", c.Then(s.Logout())).Methods("POST")
-	// s.router.Handle("/session/status", c.Then(s.GetStatus())).Methods("GET")
-	// s.router.Handle("/session/qr", c.Then(s.GetQR())).Methods("GET")
-
-	// s.router.Handle("/webhook", c.Then(s.SetWebhook())).Methods("POST")
-	// s.router.Handle("/webhook", c.Then(s.GetWebhook())).Methods("GET")
-
-	// s.router.Handle("/chat/send/text", c.Then(s.SendMessage())).Methods("POST")
-	// s.router.Handle("/chat/send/image", c.Then(s.SendImage())).Methods("POST")
-	// s.router.Handle("/chat/send/audio", c.Then(s.SendAudio())).Methods("POST")
-	// s.router.Handle("/chat/send/document", c.Then(s.SendDocument())).Methods("POST")
-	// s.router.Handle("/chat/send/template", c.Then(s.SendTemplate())).Methods("POST")
-	// s.router.Handle("/chat/send/video", c.Then(s.SendVideo())).Methods("POST")
-	// s.router.Handle("/chat/send/sticker", c.Then(s.SendSticker())).Methods("POST")
-	// s.router.Handle("/chat/send/location", c.Then(s.SendLocation())).Methods("POST")
-	// s.router.Handle("/chat/send/contact", c.Then(s.SendContact())).Methods("POST")
-	// s.router.Handle("/chat/react", c.Then(s.React())).Methods("POST")
-	//s.router.Handle("/chat/send/buttons",     c.Then(s.SendButtons())).Methods("POST")
-
-	// s.router.Handle("/user/info", c.Then(s.GetUser())).Methods("GET")
-	// s.router.Handle("/user/check", c.Then(s.CheckUser())).Methods("POST")
-	// s.router.Handle("/user/avatar", c.Then(s.GetAvatar())).Methods("POST")
-	// s.router.Handle("/user/contacts", c.Then(s.GetContacts())).Methods("GET")
-
-	// s.router.Handle("/chat/presence", c.Then(s.ChatPresence())).Methods("POST")
-	// s.router.Handle("/chat/markread", c.Then(s.MarkRead())).Methods("POST")
-	// s.router.Handle("/chat/downloadimage", c.Then(s.DownloadImage())).Methods("POST")
-	// s.router.Handle("/chat/downloadvideo", c.Then(s.DownloadVideo())).Methods("POST")
-	// s.router.Handle("/chat/downloadaudio", c.Then(s.DownloadAudio())).Methods("POST")
-	// s.router.Handle("/chat/downloaddocument", c.Then(s.DownloadDocument())).Methods("POST")
-
-	// s.router.Handle("/group/list", c.Then(s.ListGroups())).Methods("GET")
-	// s.router.Handle("/group/info", c.Then(s.GetGroupInfo())).Methods("GET")
-	// s.router.Handle("/group/invitelink", c.Then(s.GetGroupInviteLink())).Methods("GET")
-	// s.router.Handle("/group/photo", c.Then(s.SetGroupPhoto())).Methods("POST")
-	// s.router.Handle("/group/name", c.Then(s.SetGroupName())).Methods("POST")
-
-	// s.router.PathPrefix("/").Handler(http.FileServer(http.Dir(exPath+"/static/")))
 }
