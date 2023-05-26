@@ -14,13 +14,6 @@ type Middleware = alice.Constructor
 
 func (s *server) routes() {
 
-    // ex, err := os.Executable()
-    // if err != nil {
-    //     panic(err)
-    // }
-    // exPath := filepath.Dir(ex)
-
-
 	if *logType == "json" {
 		log = zerolog.New(os.Stdout).With().Timestamp().Str("role", filepath.Base(os.Args[0])).Str("host", *address).Logger()
 	} else {
@@ -29,7 +22,7 @@ func (s *server) routes() {
 	}
 
 	c := alice.New()
-	c = c.Append(s.authalice)
+	c = c.Append(s.authuser)
 	c = c.Append(hlog.NewHandler(log))
 
 	c = c.Append(hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
@@ -47,20 +40,42 @@ func (s *server) routes() {
 	c = c.Append(hlog.RefererHandler("referer"))
 	c = c.Append(hlog.RequestIDHandler("req_id", "Request-Id"))
 
-	s.router.Handle("/session/register", s.Register()).Methods("POST")
-	s.router.Handle("/session/connect", c.Then(s.Connect())).Methods("POST")
-	s.router.Handle("/session/disconnect", c.Then(s.Disconnect())).Methods("POST")
-	s.router.Handle("/session/logout", c.Then(s.Logout())).Methods("POST")
-	s.router.Handle("/session/status", c.Then(s.GetStatus())).Methods("GET")
-	s.router.Handle("/session/qr", c.Then(s.GetQR())).Methods("GET")
+	m := alice.New()
+	m = m.Append(s.authmaster)
+	m = m.Append(hlog.NewHandler(log))
+
+	m = m.Append(hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
+		hlog.FromRequest(r).Info().
+			Str("method", r.Method).
+			Stringer("url", r.URL).
+			Int("status", status).
+			Int("size", size).
+			Dur("duration", duration).
+			Msg("Got API Request")
+	}))
+	m = m.Append(hlog.RemoteAddrHandler("ip"))
+	m = m.Append(hlog.UserAgentHandler("user_agent"))
+	m = m.Append(hlog.RefererHandler("referer"))
+	m = m.Append(hlog.RequestIDHandler("req_id", "Request-Id"))
+
+	s.router.Handle("/puteri/register", m.Then(s.PuteriRegister())).Methods("POST")
+	s.router.Handle("/puteri/auth", c.Then(s.PuteriAuth())).Methods("GET")
+	s.router.Handle("/puteri/logout", c.Then(s.PuteriLogout())).Methods("GET")
+	s.router.Handle("/puteri/send", c.Then(s.PuteriSend())).Methods("POST")
+
+	// s.router.Handle("/session/connect", c.Then(s.Connect())).Methods("POST")
+	// s.router.Handle("/session/disconnect", c.Then(s.Disconnect())).Methods("POST")
+	// s.router.Handle("/session/logout", c.Then(s.Logout())).Methods("POST")
+	// s.router.Handle("/session/status", c.Then(s.GetStatus())).Methods("GET")
+	// s.router.Handle("/session/qr", c.Then(s.GetQR())).Methods("GET")
 
 	// s.router.Handle("/webhook", c.Then(s.SetWebhook())).Methods("POST")
 	// s.router.Handle("/webhook", c.Then(s.GetWebhook())).Methods("GET")
 
 	// s.router.Handle("/chat/send/text", c.Then(s.SendMessage())).Methods("POST")
-	s.router.Handle("/chat/send/image", c.Then(s.SendImage())).Methods("POST")
+	// s.router.Handle("/chat/send/image", c.Then(s.SendImage())).Methods("POST")
 	// s.router.Handle("/chat/send/audio", c.Then(s.SendAudio())).Methods("POST")
-	s.router.Handle("/chat/send/document", c.Then(s.SendDocument())).Methods("POST")
+	// s.router.Handle("/chat/send/document", c.Then(s.SendDocument())).Methods("POST")
 	// s.router.Handle("/chat/send/template", c.Then(s.SendTemplate())).Methods("POST")
 	// s.router.Handle("/chat/send/video", c.Then(s.SendVideo())).Methods("POST")
 	// s.router.Handle("/chat/send/sticker", c.Then(s.SendSticker())).Methods("POST")

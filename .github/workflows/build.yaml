@@ -31,11 +31,8 @@ jobs:
         goosarch:
           - 'linux/386'
           - 'linux/amd64'
-          - 'linux/arm'
-          - 'linux/arm64'
           - 'windows/386'
           - 'windows/amd64'
-          - 'windows/arm'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
