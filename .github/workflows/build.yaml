@@ -40,9 +40,11 @@ jobs:
         run: |
           go build -o "$BINARY_NAME" -v
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@master
+        uses: goreleaser/goreleaser-action@v4
         with:
+          # either 'goreleaser' (default) or 'goreleaser-pro':
+          distribution: goreleaser
           version: latest
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.RMODZ_TOKEN }}
