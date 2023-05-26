@@ -39,7 +39,7 @@ jobs:
       - name: Build
         run: |
           go build -o "$BINARY_NAME" -v
-       - name: Run GoReleaser
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@master
         with:
           version: latest
