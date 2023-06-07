@@ -2,25 +2,26 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"crypto/rand"
-	"fmt"
+
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/vincent-petithory/dataurl"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/types"
-	"google.golang.org/protobuf/proto"
 	"golang.org/x/crypto/bcrypt"
-	"encoding/base64"
-	"crypto/sha256"
-	"crypto/subtle"
+	"google.golang.org/protobuf/proto"
 )
 
 type Values struct {
@@ -135,7 +136,7 @@ func (s *server) PuteriRegister() http.HandlerFunc {
 		Password string
 	}
 
-	return func (w http.ResponseWriter, r *http.Request)  {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var t registerStruct
 		username := ""
 
@@ -145,11 +146,11 @@ func (s *server) PuteriRegister() http.HandlerFunc {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("Cloud not decode Playload"))
 			return
 		}
-		
-		e := s.db.QueryRow("SELECT name FROM users WHERE name=?",t.Username).Scan(&username)
+
+		e := s.db.QueryRow("SELECT name FROM users WHERE name=?", t.Username).Scan(&username)
 		if e == nil {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("User has already registered"))
-			return 
+			return
 		}
 
 		pwd := []byte(t.Password)
@@ -164,7 +165,7 @@ func (s *server) PuteriRegister() http.HandlerFunc {
 			s.Respond(w, r, http.StatusInternalServerError, e)
 			return
 		}
-		
+
 		_, err = s.db.Exec("INSERT INTO users (name, password, token) VALUES (?, ?, ?)", t.Username, string(password), string(token))
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, err)
@@ -198,14 +199,13 @@ func (s *server) PuteriAuth() http.HandlerFunc {
 			isLoggedIn = clientPointer[userid].IsLoggedIn()
 		}
 
-
 		response := map[string]interface{}{
-			"QRCode": nil,
-			"Connected": isConnected, 
-			"LoggedIn": isLoggedIn,
+			"QRCode":    nil,
+			"Connected": isConnected,
+			"LoggedIn":  isLoggedIn,
 		}
 
-		if (!isConnected) {
+		if !isConnected {
 			var subscribedEvents []string
 			subscribedEvents = append(subscribedEvents, "All")
 			eventstring := strings.Join(subscribedEvents, ",")
@@ -236,7 +236,7 @@ func (s *server) PuteriAuth() http.HandlerFunc {
 			}
 		}
 
-		if (!isLoggedIn) {
+		if !isLoggedIn {
 			code := ""
 
 			rows, err := s.db.Query("SELECT qrcode AS code FROM users WHERE id=? LIMIT 1", userid)
@@ -259,9 +259,9 @@ func (s *server) PuteriAuth() http.HandlerFunc {
 			}
 
 			response = map[string]interface{}{
-				"QRCode": fmt.Sprintf("%s", code),
-				"Connected": isConnected, 
-				"LoggedIn": isLoggedIn,
+				"QRCode":    fmt.Sprintf("%s", code),
+				"Connected": isConnected,
+				"LoggedIn":  isLoggedIn,
 			}
 		}
 
@@ -271,7 +271,6 @@ func (s *server) PuteriAuth() http.HandlerFunc {
 		} else {
 			s.Respond(w, r, http.StatusOK, string(responseJson))
 		}
-		return
 	}
 }
 
@@ -315,7 +314,6 @@ func (s *server) PuteriLogout() http.HandlerFunc {
 		} else {
 			s.Respond(w, r, http.StatusOK, string(responseJson))
 		}
-		return
 	}
 }
 
@@ -334,10 +332,10 @@ func (s *server) PuteriSend() http.HandlerFunc {
 		msgid := ""
 		var resp whatsmeow.SendResponse
 
-		// if clientPointer[userid] == nil {
-		// 	s.Respond(w, r, http.StatusInternalServerError, errors.New("No session"))
-		// 	return
-		// }
+		if clientPointer[userid] == nil {
+			s.Respond(w, r, http.StatusInternalServerError, errors.New("No session"))
+			return
+		}
 
 		decoder := json.NewDecoder(r.Body)
 		var t documentStruct
@@ -375,7 +373,7 @@ func (s *server) PuteriSend() http.HandlerFunc {
 			isValidUser = item.IsIn
 		}
 
-		if (!isValidUser) {
+		if !isValidUser {
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("Nomor %s tidak terdaftar untuk whatsapp", phoneNumber[0])))
 			return
 		}
@@ -430,7 +428,7 @@ func (s *server) PuteriSend() http.HandlerFunc {
 			}
 		}
 
-		resp, err = clientPointer[userid].SendMessage(context.Background(),recipient, msgid, msg)
+		resp, err = clientPointer[userid].SendMessage(context.Background(), recipient, msgid, msg)
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("Error sending message: %v", err)))
 			return
@@ -443,7 +441,91 @@ func (s *server) PuteriSend() http.HandlerFunc {
 		} else {
 			s.Respond(w, r, http.StatusOK, string(responseJson))
 		}
-		return
+	}
+}
+
+// Sends a regular text message
+func (s *server) PuteriSendMsg() http.HandlerFunc {
+
+	type textStruct struct {
+		Phone       string
+		Body        string
+		Id          string
+		ContextInfo waProto.ContextInfo
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		txtid := r.Context().Value("userinfo").(Values).Get("Id")
+		userid, _ := strconv.Atoi(txtid)
+
+		if clientPointer[userid] == nil {
+			s.Respond(w, r, http.StatusInternalServerError, errors.New("No session"))
+			return
+		}
+
+		msgid := ""
+		var resp whatsmeow.SendResponse
+
+		decoder := json.NewDecoder(r.Body)
+		var t textStruct
+		err := decoder.Decode(&t)
+		if err != nil {
+			s.Respond(w, r, http.StatusBadRequest, errors.New("Could not decode Payload"))
+			return
+		}
+
+		if t.Phone == "" {
+			s.Respond(w, r, http.StatusBadRequest, errors.New("Missing Phone in Payload"))
+			return
+		}
+
+		if t.Body == "" {
+			s.Respond(w, r, http.StatusBadRequest, errors.New("Missing Body in Payload"))
+			return
+		}
+
+		recipient, err := validateMessageFields(t.Phone, t.ContextInfo.StanzaId, t.ContextInfo.Participant)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("%s", err))
+			s.Respond(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		if t.Id == "" {
+			msgid = whatsmeow.GenerateMessageID()
+		} else {
+			msgid = t.Id
+		}
+
+		msg := &waProto.Message{
+			ExtendedTextMessage: &waProto.ExtendedTextMessage{
+				Text: &t.Body,
+			},
+		}
+
+		if t.ContextInfo.StanzaId != nil {
+			msg.ExtendedTextMessage.ContextInfo = &waProto.ContextInfo{
+				StanzaId:      proto.String(*t.ContextInfo.StanzaId),
+				Participant:   proto.String(*t.ContextInfo.Participant),
+				QuotedMessage: &waProto.Message{Conversation: proto.String("")},
+			}
+		}
+
+		resp, err = clientPointer[userid].SendMessage(context.Background(), recipient, msgid, msg)
+		if err != nil {
+			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("Error sending message: %v", err)))
+			return
+		}
+
+		log.Info().Str("timestamp", fmt.Sprintf("%d", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
+		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp, "Id": msgid}
+		responseJson, err := json.Marshal(response)
+		if err != nil {
+			s.Respond(w, r, http.StatusInternalServerError, err)
+		} else {
+			s.Respond(w, r, http.StatusOK, string(responseJson))
+		}
 	}
 }
 

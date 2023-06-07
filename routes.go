@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/justinas/alice"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/hlog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/justinas/alice"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/hlog"
 )
 
 type Middleware = alice.Constructor
@@ -62,4 +63,5 @@ func (s *server) routes() {
 	s.router.Handle("/puteri/auth", c.Then(s.PuteriAuth())).Methods("GET")
 	s.router.Handle("/puteri/logout", c.Then(s.PuteriLogout())).Methods("GET")
 	s.router.Handle("/puteri/send", c.Then(s.PuteriSend())).Methods("POST")
+	s.router.Handle("/puteri/send-msg", c.Then(s.PuteriSendMsg())).Methods("POST")
 }
