@@ -428,7 +428,7 @@ func (s *server) PuteriSend() http.HandlerFunc {
 			}
 		}
 
-		resp, err = clientPointer[userid].SendMessage(context.Background(), recipient, msgid, msg)
+		resp, err = clientPointer[userid].SendMessage(context.Background(), recipient, msg, whatsmeow.SendRequestExtra{ID: msgid})
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("Error sending message: %v", err)))
 			return
@@ -512,7 +512,7 @@ func (s *server) PuteriSendMsg() http.HandlerFunc {
 			}
 		}
 
-		resp, err = clientPointer[userid].SendMessage(context.Background(), recipient, msgid, msg)
+		resp, err = clientPointer[userid].SendMessage(context.Background(), recipient, msg, whatsmeow.SendRequestExtra{ID: msgid})
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("Error sending message: %v", err)))
 			return
