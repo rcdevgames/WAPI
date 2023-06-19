@@ -39,12 +39,14 @@ jobs:
       - name: Build
         run: |
           go build -o "$BINARY_NAME" -v
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+      - name: Release Notes
+        run:
+          git log $(git describe HEAD~ --tags --abbrev=0)..HEAD --pretty='format:* %h %s%n  * %an <%ae>' --no-merges >> ".github/RELEASE-TEMPLATE.md"
+      - name: Release with Notes
+        uses: softprops/action-gh-release@v1
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro':
-          distribution: goreleaser
-          version: latest
-          args: release --clean
+          body_path: ".github/RELEASE-TEMPLATE.md"
+          draft: true
+          files: ${{env.BINARY_NAME}}
         env:
           GITHUB_TOKEN: ${{ secrets.RMODZ_TOKEN }}
