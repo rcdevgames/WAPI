@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [GOLANG]
 
-name: Build
+name: Build and Push Image
 
 defaults:
   run:
@@ -12,41 +12,23 @@ defaults:
 
 jobs:
   build:
-    name: Build binary
+    name: Build
     runs-on: 'ubuntu-latest'
-    strategy:
-      matrix:
-        goosarch:
-          - 'linux/386'
-          - 'linux/amd64'
-          - 'windows/386'
-          - 'windows/amd64'
+    defaults:
+      run:
+        working-directory: './Store'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v1
         with:
-          go-version: '1.18'
-      - name: Get OS and arch info
-        run: |
-          GOOSARCH=${{matrix.goosarch}}
-          GOOS=${GOOSARCH%/*}
-          GOARCH=${GOOSARCH#*/}
-          BINARY_NAME=${{github.repository}}-$GOOS-$GOARCH
-          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
-          echo "GOOS=$GOOS" >> $GITHUB_ENV
-          echo "GOARCH=$GOARCH" >> $GITHUB_ENV
-      - name: Build
-        run: |
-          go build -o "$BINARY_NAME" -v
-      - name: Release Notes
-        run:
-          git log $(git describe HEAD~ --tags --abbrev=0)..HEAD --pretty='format:* %h %s%n  * %an <%ae>' --no-merges >> ".github/RELEASE-TEMPLATE.md"
-      - name: Release with Notes
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: ".github/RELEASE-TEMPLATE.md"
-          draft: true
-          files: ${{env.BINARY_NAME}}
-        env:
-          GITHUB_TOKEN: ${{ secrets.RMODZ_TOKEN }}
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.RMODZ_TOKEN}}
+      
+      - name: 'Build Inventory Image'
+          run: |
+            docker build . --tag ghcr.io/rcdevgames/wapi:latest
+            docker push ghcr.io/rcdevgames/wapi:latest
