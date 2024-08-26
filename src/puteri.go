@@ -320,9 +320,11 @@ func (s *server) PuteriLogout() http.HandlerFunc {
 func (s *server) PuteriSend() http.HandlerFunc {
 
 	type documentStruct struct {
+		Caption     string
 		Phone       string
-		Base64      string
+		Document    string
 		FileName    string
+		Id          string
 		ContextInfo waProto.ContextInfo
 	}
 
@@ -350,7 +352,7 @@ func (s *server) PuteriSend() http.HandlerFunc {
 			return
 		}
 
-		if t.Base64 == "" {
+		if t.Document == "" {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("Missing Document in Payload"))
 			return
 		}
@@ -379,7 +381,7 @@ func (s *server) PuteriSend() http.HandlerFunc {
 		}
 		// End Check Number Whatsapp is Valid
 
-		recipient, err := validateMessageFields(t.Phone, t.ContextInfo.StanzaId, t.ContextInfo.Participant)
+		recipient, err := validateMessageFields(t.Phone, t.ContextInfo.StanzaID, t.ContextInfo.Participant)
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("%s", err))
 			s.Respond(w, r, http.StatusBadRequest, err)
@@ -391,8 +393,8 @@ func (s *server) PuteriSend() http.HandlerFunc {
 		var uploaded whatsmeow.UploadResponse
 		var filedata []byte
 
-		if t.Base64[0:29] == "data:application/octet-stream" {
-			dataURL, err := dataurl.DecodeString(t.Base64)
+		if t.Document[0:29] == "data:application/octet-stream" {
+			dataURL, err := dataurl.DecodeString(t.Document)
 			if err != nil {
 				s.Respond(w, r, http.StatusBadRequest, errors.New("Could not decode Base64 encoded data from payload"))
 				return
@@ -409,20 +411,32 @@ func (s *server) PuteriSend() http.HandlerFunc {
 			return
 		}
 
+		// msg := &waProto.Message{DocumentMessage: &waProto.DocumentMessage{
+		// 	Url:           proto.String(uploaded.URL),
+		// 	FileName:      &t.FileName,
+		// 	DirectPath:    proto.String(uploaded.DirectPath),
+		// 	MediaKey:      uploaded.MediaKey,
+		// 	Mimetype:      proto.String(http.DetectContentType(filedata)),
+		// 	FileEncSha256: uploaded.FileEncSHA256,
+		// 	FileSha256:    uploaded.FileSHA256,
+		// 	FileLength:    proto.Uint64(uint64(len(filedata))),
+		// }}
+
 		msg := &waProto.Message{DocumentMessage: &waProto.DocumentMessage{
-			Url:           proto.String(uploaded.URL),
+			URL:           proto.String(uploaded.URL),
 			FileName:      &t.FileName,
 			DirectPath:    proto.String(uploaded.DirectPath),
 			MediaKey:      uploaded.MediaKey,
 			Mimetype:      proto.String(http.DetectContentType(filedata)),
-			FileEncSha256: uploaded.FileEncSHA256,
-			FileSha256:    uploaded.FileSHA256,
+			FileEncSHA256: uploaded.FileEncSHA256,
+			FileSHA256:    uploaded.FileSHA256,
 			FileLength:    proto.Uint64(uint64(len(filedata))),
+			Caption:       proto.String(t.Caption),
 		}}
 
-		if t.ContextInfo.StanzaId != nil {
+		if t.ContextInfo.StanzaID != nil {
 			msg.ExtendedTextMessage.ContextInfo = &waProto.ContextInfo{
-				StanzaId:      proto.String(*t.ContextInfo.StanzaId),
+				StanzaID:      proto.String(*t.ContextInfo.StanzaID),
 				Participant:   proto.String(*t.ContextInfo.Participant),
 				QuotedMessage: &waProto.Message{Conversation: proto.String("")},
 			}
@@ -485,7 +499,7 @@ func (s *server) PuteriSendMsg() http.HandlerFunc {
 			return
 		}
 
-		recipient, err := validateMessageFields(t.Phone, t.ContextInfo.StanzaId, t.ContextInfo.Participant)
+		recipient, err := validateMessageFields(t.Phone, t.ContextInfo.StanzaID, t.ContextInfo.Participant)
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("%s", err))
 			s.Respond(w, r, http.StatusBadRequest, err)
@@ -504,9 +518,9 @@ func (s *server) PuteriSendMsg() http.HandlerFunc {
 			},
 		}
 
-		if t.ContextInfo.StanzaId != nil {
+		if t.ContextInfo.StanzaID != nil {
 			msg.ExtendedTextMessage.ContextInfo = &waProto.ContextInfo{
-				StanzaId:      proto.String(*t.ContextInfo.StanzaId),
+				StanzaID:      proto.String(*t.ContextInfo.StanzaID),
 				Participant:   proto.String(*t.ContextInfo.Participant),
 				QuotedMessage: &waProto.Message{Conversation: proto.String("")},
 			}
@@ -554,22 +568,22 @@ func (s *server) Respond(w http.ResponseWriter, r *http.Request, status int, dat
 	}
 }
 
-func validateMessageFields(phone string, stanzaid *string, participant *string) (types.JID, error) {
+func validateMessageFields(phone string, StanzaID *string, participant *string) (types.JID, error) {
 
 	recipient, ok := parseJID(phone)
 	if !ok {
 		return types.NewJID("", types.DefaultUserServer), errors.New("Could not parse Phone")
 	}
 
-	if stanzaid != nil {
+	if StanzaID != nil {
 		if participant == nil {
 			return types.NewJID("", types.DefaultUserServer), errors.New("Missing Participant in ContextInfo")
 		}
 	}
 
 	if participant != nil {
-		if stanzaid == nil {
-			return types.NewJID("", types.DefaultUserServer), errors.New("Missing StanzaId in ContextInfo")
+		if StanzaID == nil {
+			return types.NewJID("", types.DefaultUserServer), errors.New("Missing StanzaID in ContextInfo")
 		}
 	}
 
