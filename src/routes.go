@@ -59,9 +59,28 @@ func (s *server) routes() {
 	m = m.Append(hlog.RefererHandler("referer"))
 	m = m.Append(hlog.RequestIDHandler("req_id", "Request-Id"))
 
+	// PUBLIC
+	p := alice.New()
+	p = p.Append(hlog.NewHandler(log))
+
+	p = p.Append(hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
+		hlog.FromRequest(r).Info().
+			Str("method", r.Method).
+			Stringer("url", r.URL).
+			Int("status", status).
+			Int("size", size).
+			Dur("duration", duration).
+			Msg("Got API Request")
+	}))
+	p = p.Append(hlog.RemoteAddrHandler("ip"))
+	p = p.Append(hlog.UserAgentHandler("user_agent"))
+	p = p.Append(hlog.RefererHandler("referer"))
+	p = p.Append(hlog.RequestIDHandler("req_id", "Request-Id"))
+
 	s.router.Handle("/puteri/register", m.Then(s.PuteriRegister())).Methods("POST")
 	s.router.Handle("/puteri/auth", c.Then(s.PuteriAuth())).Methods("GET")
 	s.router.Handle("/puteri/logout", c.Then(s.PuteriLogout())).Methods("GET")
 	s.router.Handle("/puteri/send", c.Then(s.PuteriSend())).Methods("POST")
 	s.router.Handle("/puteri/send-msg", c.Then(s.PuteriSendMsg())).Methods("POST")
+	s.router.Handle("/", p.Then(s.HealthCheck())).Methods("GET")
 }

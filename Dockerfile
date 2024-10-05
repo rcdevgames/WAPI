@@ -1,21 +1,20 @@
-FROM golang:1.20-alpine as builder
-ENV APP_HOME /app
 
-WORKDIR "$APP_HOME"
-COPY src/ .
+# The build stage
+FROM golang:alpine as builder
+RUN apk add --no-cache build-base
+WORKDIR /app
+COPY ./src .
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o rmodz-wa .
 
-RUN go mod download
-RUN go mod verify
-RUN go build -o wapi
+# The run stage
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/rmodz-wa .
 
-FROM golang:1.20-alpine
-ENV APP_HOME /app
+# Debugging steps
+RUN echo "Checking contents:" && ls -l /app
+RUN echo "Attempting to execute binary:" && ./rmodz-wa --help || true
 
-RUN mkdir -p "$APP_HOME"
-WORKDIR "$APP_HOME"
-
-COPY --from=builder "$APP_HOME"/wapi $APP_HOME
-VOLUME [ "$APP_HOME/dbdata", "$APP_HOME/files" ]
-
-EXPOSE 80
-CMD ["./wapi", "-logtype", "json"]
+EXPOSE 3000
+VOLUME ["/app"]
+CMD ["./rmodz-wa", "-port=3000"]

@@ -543,6 +543,20 @@ func (s *server) PuteriSendMsg() http.HandlerFunc {
 	}
 }
 
+// Sends a regular text message
+func (s *server) HealthCheck() http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		response := map[string]interface{}{"message": "Connected"}
+		responseJson, err := json.Marshal(response)
+		if err != nil {
+			s.Respond(w, r, http.StatusInternalServerError, err)
+		} else {
+			s.Respond(w, r, http.StatusOK, string(responseJson))
+		}
+	}
+}
+
 // Writes JSON response to API clients
 func (s *server) Respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
